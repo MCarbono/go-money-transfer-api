@@ -3,6 +3,7 @@ package test
 import (
 	"money-transfer-api/database"
 	"money-transfer-api/service"
+	"money-transfer-api/uow"
 	"testing"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -14,6 +15,7 @@ func TestUserService(t *testing.T) {
 		panic(err)
 	}
 	defer DB.Close()
+	uow := uow.NewUowImpl(DB)
 
 	t.Run("Should get the user balance by its ID", func(t *testing.T) {
 		defer DB.Exec("DELETE FROM users;")
@@ -22,7 +24,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB)
+		user := service.NewUser(DB, uow)
 		output, err := user.GetBalance(1)
 		if err != nil {
 			t.Error(err)

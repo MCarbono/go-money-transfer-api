@@ -4,15 +4,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"money-transfer-api/uow"
 )
 
 type User struct {
-	DB *sql.DB
+	DB  *sql.DB
+	uow uow.Uow
 }
 
-func NewUser(db *sql.DB) *User {
+func NewUser(db *sql.DB, uow uow.Uow) *User {
 	return &User{
-		DB: db,
+		DB:  db,
+		uow: uow,
 	}
 }
 
