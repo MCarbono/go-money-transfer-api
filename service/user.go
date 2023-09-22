@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,21 +20,31 @@ func NewUser(db *sql.DB, uow uow.Uow) *User {
 	}
 }
 
-func (u *User) Transfer(input *TransferInput) error {
-	outputBalanceDebtor, err := u.GetBalance(input.BeneficiaryID)
-	if err != nil {
-		return fmt.Errorf("error trying to get balance from user with ID %v. %w", input.DebtorID, err)
-	}
-	if outputBalanceDebtor.Balance < input.Amount {
-		return errors.New("insufficient funds")
-	}
-	newBalance := outputBalanceDebtor.Balance - input.Amount
-	_, err = u.DB.Exec("UPDATE users SET balance = $2 WHERE id = $1", input.DebtorID, newBalance)
-	if err != nil {
-		return fmt.Errorf("error trying to withdraw: %w", err)
-	}
-
-	return nil
+func (u *User) Transfer(input *TransferInput) (err error) {
+	err = u.uow.Do(context.Background(), func(uow *uow.UowImpl) error {
+		var getBalanceDTOOutput GetBalanceDTOOutput
+		err = uow.Tx.QueryRow(`SELECT balance FROM users WHERE id = $1`, input.DebtorID).Scan(&getBalanceDTOOutput.Balance)
+		if err != nil {
+			return fmt.Errorf("error trying to get balance from user with ID %v. %w", input.DebtorID, err)
+		}
+		if getBalanceDTOOutput.Balance < input.Amount {
+			return errors.New("insufficient funds")
+		}
+		newBalance := getBalanceDTOOutput.Balance - input.Amount
+		_, err = uow.Tx.Exec("UPDATE users SET balance = $2 WHERE id = $1", input.DebtorID, newBalance)
+		if err != nil {
+			return err
+		}
+		var getBalanceDTOOutputBene GetBalanceDTOOutput
+		err = uow.Tx.QueryRow(`SELECT balance FROM users WHERE id = $1`, input.BeneficiaryID).Scan(&getBalanceDTOOutputBene.Balance)
+		if err != nil {
+			return fmt.Errorf("error trying to get balance from user with ID %v. %w", input.BeneficiaryID, err)
+		}
+		b := getBalanceDTOOutputBene.Balance + input.Amount
+		_, err = uow.Tx.Exec("UPDATE users SET balance = $2 WHERE id = $1", input.BeneficiaryID, b)
+		return err
+	})
+	return
 }
 
 type TransferInput struct {
