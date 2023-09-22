@@ -4,3 +4,5 @@ db_down:
 db_up:
 	docker compose up -d
 
+tests:
+	go test ./... -v
