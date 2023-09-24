@@ -8,11 +8,6 @@ import (
 	"money-transfer-api/entity"
 )
 
-const (
-	USER_REPOSITORY_POSTGRES     = "postgres"
-	FAKE_USER_REPOSITORY_DEPOSIT = "fake"
-)
-
 type UserRepository interface {
 	FindUserTx(ctx context.Context, ID int) (*entity.User, error)
 	Withdraw(ctx context.Context, user *entity.User) error
