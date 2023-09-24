@@ -8,7 +8,10 @@ import (
 	"money-transfer-api/repository"
 )
 
+type RepositoryFactory func() interface{}
+
 type Uow interface {
+	Register(name string, fc RepositoryFactory)
 	Do(ctx context.Context, fn func(uow *UowImpl) error) error
 	CommitOrRollback() error
 	Rollback() error
@@ -16,25 +19,25 @@ type Uow interface {
 }
 
 type UowImpl struct {
-	Db *sql.DB
-	Tx *sql.Tx
+	Db           *sql.DB
+	Tx           *sql.Tx
+	Repositories map[string]RepositoryFactory
+}
+
+func (u *UowImpl) Register(name string, fc RepositoryFactory) {
+	u.Repositories[name] = fc
 }
 
 func NewUowImpl(db *sql.DB) *UowImpl {
 	return &UowImpl{
-		Db: db,
+		Db:           db,
+		Repositories: make(map[string]RepositoryFactory),
 	}
 }
 
 func (u *UowImpl) GetUserRepository(ctx context.Context, implementationName string) (repository.UserRepository, error) {
-	var repo repository.UserRepository
-	if implementationName == repository.USER_REPOSITORY_POSTGRES {
-		repo = repository.NewUserRepositoryPostgres(u.Db, u.Tx)
-	}
-	if implementationName == repository.FAKE_USER_REPOSITORY_DEPOSIT {
-		repo = repository.NewUserRepositoryFakeTest(u.Db, u.Tx)
-	}
-	return repo, nil
+	repo := u.Repositories[implementationName]()
+	return repo.(repository.UserRepository), nil
 }
 
 func (u *UowImpl) Do(ctx context.Context, fn func(uow *UowImpl) error) error {

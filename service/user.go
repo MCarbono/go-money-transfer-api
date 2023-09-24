@@ -24,7 +24,7 @@ func NewUser(db *sql.DB, uow uow.Uow, userRepository string) *User {
 func (u *User) Transfer(input *TransferInput) (err error) {
 	err = u.uow.Do(context.Background(), func(uow *uow.UowImpl) error {
 		ctx := context.Background()
-		repo, err := uow.GetUserRepository(ctx, u.UserRepository)
+		repo, err := uow.GetUserRepository(ctx, "UserRepository")
 		if err != nil {
 			return err
 		}

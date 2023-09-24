@@ -20,6 +20,10 @@ func TestUserService(t *testing.T) {
 	}
 	defer DB.Close()
 	uow := uow.NewUowImpl(DB)
+	uow.Register("UserRepository", func() interface{} {
+		repo := repository.NewUserRepositoryPostgres(uow.Db, uow.Tx)
+		return repo
+	})
 	t.Run("Should get the user balance by its ID", func(t *testing.T) {
 		DB.Exec("DELETE FROM users;")
 		defer DB.Exec("DELETE FROM users;")
@@ -181,6 +185,10 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
+		uow.Register("UserRepository", func() interface{} {
+			repo := repository.NewUserRepositoryFakeTest(uow.Db, uow.Tx)
+			return repo
+		})
 		user := service.NewUser(DB, uow, repository.FAKE_USER_REPOSITORY_DEPOSIT)
 		err := user.Transfer(&service.TransferInput{
 			Amount:        100,
