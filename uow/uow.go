@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"money-transfer-api/repository"
 )
 
 type Uow interface {
 	Do(ctx context.Context, fn func(uow *UowImpl) error) error
 	CommitOrRollback() error
 	Rollback() error
+	GetUserRepository(ctx context.Context, implementationName string) (repository.UserRepository, error)
 }
 
 type UowImpl struct {
@@ -22,6 +24,17 @@ func NewUowImpl(db *sql.DB) *UowImpl {
 	return &UowImpl{
 		Db: db,
 	}
+}
+
+func (u *UowImpl) GetUserRepository(ctx context.Context, implementationName string) (repository.UserRepository, error) {
+	var repo repository.UserRepository
+	if implementationName == repository.USER_REPOSITORY_POSTGRES {
+		repo = repository.NewUserRepositoryPostgres(u.Db, u.Tx)
+	}
+	if implementationName == repository.FAKE_USER_REPOSITORY_DEPOSIT {
+		repo = repository.NewUserRepositoryFakeTest(u.Db, u.Tx)
+	}
+	return repo, nil
 }
 
 func (u *UowImpl) Do(ctx context.Context, fn func(uow *UowImpl) error) error {
@@ -43,7 +56,11 @@ func (u *UowImpl) Do(ctx context.Context, fn func(uow *UowImpl) error) error {
 	}
 	return u.CommitOrRollback()
 }
+
 func (u *UowImpl) CommitOrRollback() error {
+	defer func() {
+		u.Tx = nil
+	}()
 	err := u.Tx.Commit()
 	if err != nil {
 		errRb := u.Rollback()
@@ -55,7 +72,11 @@ func (u *UowImpl) CommitOrRollback() error {
 	u.Tx = nil
 	return nil
 }
+
 func (u *UowImpl) Rollback() error {
+	defer func() {
+		u.Tx = nil
+	}()
 	if u.Tx == nil {
 		return errors.New("no transaction to rollback")
 	}
