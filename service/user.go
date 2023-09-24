@@ -8,16 +8,14 @@ import (
 )
 
 type User struct {
-	DB             *sql.DB
-	uow            uow.Uow
-	UserRepository string
+	DB  *sql.DB
+	uow uow.Uow
 }
 
-func NewUser(db *sql.DB, uow uow.Uow, userRepository string) *User {
+func NewUser(db *sql.DB, uow uow.Uow) *User {
 	return &User{
-		DB:             db,
-		uow:            uow,
-		UserRepository: userRepository,
+		DB:  db,
+		uow: uow,
 	}
 }
 
