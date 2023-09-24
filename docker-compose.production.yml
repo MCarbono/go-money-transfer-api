@@ -8,6 +8,8 @@ services:
       - db
     networks:
       - mynetwork
+    env_file:
+      - .env 
   db:
     image: postgres
     ports:

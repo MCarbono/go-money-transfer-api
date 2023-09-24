@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"money-transfer-api/config"
 	"money-transfer-api/infra/controller"
 	"money-transfer-api/infra/database"
 	"money-transfer-api/infra/router"
@@ -19,7 +20,11 @@ const (
 )
 
 func main() {
-	DB, err := database.Open("db")
+	config, err := config.LoadEnvConfig()
+	if err != nil {
+		panic(err)
+	}
+	DB, err := database.Open(config.DBHost)
 	if err != nil {
 		panic(err)
 	}
