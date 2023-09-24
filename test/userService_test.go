@@ -14,7 +14,7 @@ import (
 )
 
 func TestUserService(t *testing.T) {
-	DB, err := database.Open()
+	DB, err := database.Open("localhost")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+		user := service.NewUser(DB, uow)
 		output, err := user.GetBalance(1)
 		if err != nil {
 			t.Error(err)
@@ -57,7 +57,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+		user := service.NewUser(DB, uow)
 		var wg sync.WaitGroup
 		totalRequests := 5
 		wg.Add(totalRequests)
@@ -115,7 +115,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+		user := service.NewUser(DB, uow)
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() {
@@ -189,7 +189,7 @@ func TestUserService(t *testing.T) {
 			repo := repository.NewUserRepositoryFakeTest(uow.Db, uow.Tx)
 			return repo
 		})
-		user := service.NewUser(DB, uow, repository.FAKE_USER_REPOSITORY_DEPOSIT)
+		user := service.NewUser(DB, uow)
 		err := user.Transfer(&service.TransferInput{
 			Amount:        100,
 			DebtorID:      1,
@@ -228,7 +228,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+		user := service.NewUser(DB, uow)
 		got := user.Transfer(&service.TransferInput{
 			Amount:        1000,
 			DebtorID:      1,
