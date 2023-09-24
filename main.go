@@ -19,13 +19,17 @@ const (
 )
 
 func main() {
-	DB, err := database.Open()
+	DB, err := database.Open("db")
 	if err != nil {
 		panic(err)
 	}
 	defer DB.Close()
 	uow := uow.NewUowImpl(DB)
-	userService := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+	uow.Register("UserRepository", func() interface{} {
+		repo := repository.NewUserRepositoryPostgres(uow.Db, uow.Tx)
+		return repo
+	})
+	userService := service.NewUser(DB, uow)
 	controller := controller.NewUserController(*userService)
 	router := router.NewRouter(*controller)
 	fmt.Printf("Starting server on port %v\n", PORT)
