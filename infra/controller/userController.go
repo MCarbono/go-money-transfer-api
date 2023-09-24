@@ -26,7 +26,7 @@ func (u *UserController) Transfer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrMessage{Err: "invalid payload"})
+		json.NewEncoder(w).Encode(ErrMessage{Err: err.Error()})
 		return
 	}
 	err = u.UserService.Transfer(&input)
@@ -43,13 +43,13 @@ func (u *UserController) GetBalance(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.Atoi(id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrMessage{Err: "invalid userIDs"})
+		json.NewEncoder(w).Encode(ErrMessage{Err: err.Error()})
 		return
 	}
 	balance, err := u.UserService.GetBalance(userID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrMessage{Err: "internal server error"})
+		json.NewEncoder(w).Encode(ErrMessage{Err: err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusOK)
