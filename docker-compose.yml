@@ -5,7 +5,7 @@ services:
     image: postgres
     environment:
       POSTGRES_USER: money-api  
-      POSTGRES_PASSWORD: money-api
+      POSTGRES_PASSWORD: root
       POSTGRES_DB: money-api
     ports:
      - 5432:5432
