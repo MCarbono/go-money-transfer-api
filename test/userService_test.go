@@ -1,7 +1,9 @@
 package test
 
 import (
-	"money-transfer-api/database"
+	"errors"
+	"money-transfer-api/infra/database"
+	"money-transfer-api/repository"
 	"money-transfer-api/service"
 	"money-transfer-api/uow"
 	"sync"
@@ -26,14 +28,15 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow)
+		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
 		output, err := user.GetBalance(1)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		if output.Balance != 2000 {
-			t.Errorf("User balance should be equal to 2000, but got %v", output.Balance)
+		want := 2000.0
+		if output.Balance != want {
+			t.Errorf("User balance should be equal to %v, but got %v", want, output.Balance)
 		}
 	})
 
@@ -50,7 +53,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow)
+		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
 		var wg sync.WaitGroup
 		totalRequests := 5
 		wg.Add(totalRequests)
@@ -82,11 +85,11 @@ func TestUserService(t *testing.T) {
 		}
 		outputDebtorWant := 0.0
 		if outputDebtor.Balance != outputDebtorWant {
-			t.Errorf("Transfer() failed. want: %v, got %v", outputDebtorWant, outputDebtor.Balance)
+			t.Errorf("Transfer() failed. Debtor balance want: %v, got %v", outputDebtorWant, outputDebtor.Balance)
 		}
 		outputBeneficiaryWant := 500.0
 		if outputBeneficiary.Balance != outputBeneficiaryWant {
-			t.Errorf("Transfer() failed. want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
+			t.Errorf("Transfer() failed. Beneciary balance want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
 		}
 	})
 
@@ -108,7 +111,7 @@ func TestUserService(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		user := service.NewUser(DB, uow)
+		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() {
@@ -162,6 +165,70 @@ func TestUserService(t *testing.T) {
 		outputBeneficiaryWant := 200.0
 		if outputBeneficiary.Balance != outputBeneficiaryWant {
 			t.Errorf("Transfer() failed. want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
+		}
+	})
+
+	t.Run("Should not be able to make a transfer because something went wrong while doing it and the balance of the debtor should be restored", func(t *testing.T) {
+		DB.Exec("DELETE FROM users;")
+		defer DB.Exec("DELETE FROM users;")
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (1, 'first_user', 500);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (2, 'second_user', 100);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		user := service.NewUser(DB, uow, repository.FAKE_USER_REPOSITORY_DEPOSIT)
+		err := user.Transfer(&service.TransferInput{
+			Amount:        100,
+			DebtorID:      1,
+			BeneficiaryID: 2,
+		})
+		outputDebtor, err := user.GetBalance(1)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		outputBeneficiary, err := user.GetBalance(2)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		outputDebtorWant := 500.0
+		if outputDebtor.Balance != outputDebtorWant {
+			t.Errorf("Transfer() failed. want: %v, got %v", outputDebtorWant, outputDebtor.Balance)
+		}
+		outputBeneficiaryWant := 100.0
+		if outputBeneficiary.Balance != outputBeneficiaryWant {
+			t.Errorf("Transfer() failed. want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
+		}
+	})
+
+	t.Run("Should not be able to make a transfer because debtor user does not have enough balance", func(t *testing.T) {
+		DB.Exec("DELETE FROM users;")
+		defer DB.Exec("DELETE FROM users;")
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (1, 'first_user', 500);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (2, 'second_user', 0);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		user := service.NewUser(DB, uow, repository.USER_REPOSITORY_POSTGRES)
+		got := user.Transfer(&service.TransferInput{
+			Amount:        1000,
+			DebtorID:      1,
+			BeneficiaryID: 2,
+		})
+		want := errors.New("insufficient funds")
+		if want.Error() != got.Error() {
+			t.Errorf("Transfer() failed. want %v, got %v", want, got)
 		}
 	})
 }
