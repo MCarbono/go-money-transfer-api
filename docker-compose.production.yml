@@ -1,0 +1,25 @@
+version: '3'
+services:
+  web:
+    build: . 
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    networks:
+      - mynetwork
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: money-api 
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: money-api 
+    volumes:
+      - ./create.sql:/docker-entrypoint-initdb.d/create.sql
+    networks:
+      - mynetwork
+networks:
+  mynetwork:
+    driver: bridge
