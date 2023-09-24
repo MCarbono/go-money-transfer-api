@@ -5,4 +5,7 @@ db_up:
 	docker compose up -d
 
 tests:
-	go test ./... -v
+	go test ./test -v
+
+run:
+	go run main.go
