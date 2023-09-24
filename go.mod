@@ -5,6 +5,7 @@ go 1.18
 require github.com/jackc/pgx/v4 v4.18.1
 
 require (
+	github.com/go-chi/chi v1.5.5 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
