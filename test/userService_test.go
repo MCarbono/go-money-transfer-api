@@ -62,7 +62,7 @@ func TestUserService(t *testing.T) {
 		totalRequests := 5
 		wg.Add(totalRequests)
 		for i := 0; i < totalRequests; i++ {
-			time.Sleep(time.Millisecond * 10)
+			time.Sleep(time.Millisecond * 8)
 			go func() {
 				defer wg.Done()
 				err := user.Transfer(&service.TransferInput{
