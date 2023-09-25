@@ -7,7 +7,8 @@ import (
 )
 
 type config struct {
-	DBHost string
+	DBHost     string
+	ServerPort string
 }
 
 func LoadEnvConfig() (config, error) {
@@ -17,5 +18,6 @@ func LoadEnvConfig() (config, error) {
 		return cfg, err
 	}
 	cfg.DBHost = os.Getenv("DB_HOST")
+	cfg.ServerPort = os.Getenv("PORT")
 	return cfg, nil
 }

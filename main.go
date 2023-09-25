@@ -15,10 +15,6 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-const (
-	PORT = 3000
-)
-
 func main() {
 	config, err := config.LoadEnvConfig()
 	if err != nil {
@@ -37,6 +33,6 @@ func main() {
 	userService := service.NewUser(DB, uow)
 	controller := controller.NewUserController(*userService)
 	router := router.NewRouter(*controller)
-	fmt.Printf("Starting server on port %v\n", PORT)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", PORT), router))
+	fmt.Printf("Starting server on port %v\n", config.ServerPort)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", config.ServerPort), router))
 }
