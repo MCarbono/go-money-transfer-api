@@ -19,7 +19,7 @@ bank account to another one. I used this challenge to practice a little bit abou
 
 | Name        | Description | Documentation | Installation |
 | ----------- | ----------- | ------------- | ----------- |     
-| pgx      | postgres database driver       |  github.com/jackc/pgx/v4 |  go get go get github.com/jackc/pgx/v4      |
+| pgx      | postgres database driver       |  github.com/jackc/pgx/v4 |  go get github.com/jackc/pgx/v4      |
 | chi               |  http router  lib | https://github.com/go-chi/chi                   | go get github.com/go-chi/chi   |
 | godotenv             | .env vars manager              | github.com/joho/godotenv             | go get github.com/joho/godotenv    | 
 
