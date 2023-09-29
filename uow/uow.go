@@ -44,7 +44,7 @@ func (u *UowImpl) Do(ctx context.Context, fn func(uow *UowImpl) error) error {
 	if u.Tx != nil {
 		return errors.New("transaction already started")
 	}
-	tx, err := u.Db.BeginTx(ctx, nil)
+	tx, err := u.Db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return err
 	}
