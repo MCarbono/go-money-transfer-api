@@ -1,10 +1,12 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"money-transfer-api/infra/database"
 	"money-transfer-api/repository"
 	"money-transfer-api/service"
+	"money-transfer-api/test/dockertest"
 	"money-transfer-api/uow"
 	"sync"
 	"testing"
@@ -14,18 +16,32 @@ import (
 )
 
 func TestUserService(t *testing.T) {
+	ctx := context.Background()
+	container, err := dockertest.StartPostgresContainer(ctx)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := container.Terminate(ctx); err != nil {
+			panic(err)
+		}
+	}()
 	dbConfig := database.DatabaseConfig{
-		Host:     "localhost",
-		Port:     "5432",
-		User:     "money-api",
-		Password: "money-api",
-		Name:     "money-api",
+		Host:     container.Host,
+		Port:     container.Port,
+		User:     dockertest.DbUser,
+		Password: dockertest.DbPassword,
+		Name:     dockertest.DbName,
 	}
 	DB, err := database.Open(dbConfig)
 	if err != nil {
 		panic(err)
 	}
 	defer DB.Close()
+	_, err = DB.Exec("create table users(id integer primary key, username text, balance numeric);")
+	if err != nil {
+		panic(err)
+	}
 	uow := uow.NewUowImpl(DB)
 	uow.Register("UserRepository", func() interface{} {
 		repo := repository.NewUserRepositoryPostgres(uow.Db, uow.Tx)
