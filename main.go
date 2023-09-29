@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	DB, err := database.Open(config.DBHost)
+	DB, err := database.Open(config.DatabaseConfig)
 	if err != nil {
 		panic(err)
 	}
