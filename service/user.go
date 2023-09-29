@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"money-transfer-api/uow"
+	"time"
 )
 
 type User struct {
@@ -17,7 +18,7 @@ func NewUser(db *sql.DB, uow uow.Uow) *User {
 	return &User{
 		DB:                   db,
 		uow:                  uow,
-		transferTotalRetries: 5,
+		transferTotalRetries: 3,
 	}
 }
 
@@ -55,6 +56,7 @@ func (u *User) Transfer(input *TransferInput) (err error) {
 		}
 		if err != nil {
 			if err.Error() == "transaction already started" {
+				time.Sleep(time.Millisecond * 50)
 				fmt.Println(err.Error())
 				total++
 				continue
