@@ -14,7 +14,14 @@ import (
 )
 
 func TestUserService(t *testing.T) {
-	DB, err := database.Open("localhost")
+	dbConfig := database.DatabaseConfig{
+		Host:     "localhost",
+		Port:     "5432",
+		User:     "money-api",
+		Password: "money-api",
+		Name:     "money-api",
+	}
+	DB, err := database.Open(dbConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +69,7 @@ func TestUserService(t *testing.T) {
 		totalRequests := 5
 		wg.Add(totalRequests)
 		for i := 0; i < totalRequests; i++ {
-			time.Sleep(time.Millisecond * 8)
+			time.Sleep(time.Millisecond * 5)
 			go func() {
 				defer wg.Done()
 				err := user.Transfer(&service.TransferInput{
