@@ -22,9 +22,10 @@ bank account to another one. I used this challenge to practice a little bit abou
 | pgx      | postgres database driver       |  github.com/jackc/pgx/v4 |  go get github.com/jackc/pgx/v4      |
 | chi               |  http router  lib | https://github.com/go-chi/chi                   | go get github.com/go-chi/chi   |
 | godotenv             | .env vars manager              | github.com/joho/godotenv             | go get github.com/joho/godotenv    | 
+|  testcontainers     | create a container to do integration tests                          |  https://golang.testcontainers.org/quickstart/                                | go get github.com/testcontainers/testcontainers-go
+| testcontainers-postgres                     | postgres database module to use with testcontainers               | https://golang.testcontainers.org/modules/postgres/             | go get github.com/testcontainers/testcontainers-go/modules/postgres     
 
 ---
-
 <a id="Run"></a> 
 ## ⚙️ Run
 
@@ -103,8 +104,8 @@ make db_down
 <a id="Tests"></a> 
 ## 🧪 Tests
 
-All the tests in this project are integration ones. So, befofe running it is required
-to instantiate the database first. After you start it, run one of the commands below:
+All the tests in this project are integration ones. This project uses testcontainers to manage a postgres database to be used only to test.
+After all the test cases are done, the container will be terminated. Run one of the commands below:
 
 ```bash
 make tests
