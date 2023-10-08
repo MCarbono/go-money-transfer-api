@@ -59,3 +59,11 @@ func (r *UserRepositoryFakeTest) FindUserTx(ctx context.Context, ID int) (*entit
 	}
 	return &user, nil
 }
+
+func (r *UserRepositoryFakeTest) Update(ctx context.Context, user *entity.User) error {
+	_, err := r.Tx.Exec("UPDATE users SET balance = $2, username = $3 WHERE id = $1", user.ID, user.Balance, user.Username)
+	if err != nil {
+		return fmt.Errorf("error trying to update. %w", err)
+	}
+	return nil
+}
