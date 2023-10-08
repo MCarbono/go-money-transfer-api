@@ -8,85 +8,69 @@ import (
 	"money-transfer-api/repository"
 )
 
-type RepositoryFactory func() interface{}
+var isolationSerializableErr = errors.New("ERROR: could not serialize access due to concurrent update (SQLSTATE 40001)")
 
 type Uow interface {
-	Register(name string, fc RepositoryFactory)
-	Do(ctx context.Context, fn func(uow *UowImpl) error) error
-	CommitOrRollback() error
-	Rollback() error
-	GetUserRepository(ctx context.Context, implementationName string) (repository.UserRepository, error)
+	Do(ctx context.Context, fn func(tx *sql.Tx) error) error
+	GetUserRepository(ctx context.Context, tx *sql.Tx) repository.UserRepository
 }
 
 type UowImpl struct {
 	Db           *sql.DB
-	Tx           *sql.Tx
-	Repositories map[string]RepositoryFactory
-}
-
-func (u *UowImpl) Register(name string, fc RepositoryFactory) {
-	u.Repositories[name] = fc
+	totalRetries int
 }
 
 func NewUowImpl(db *sql.DB) *UowImpl {
 	return &UowImpl{
 		Db:           db,
-		Repositories: make(map[string]RepositoryFactory),
+		totalRetries: 4,
 	}
 }
 
-func (u *UowImpl) GetUserRepository(ctx context.Context, implementationName string) (repository.UserRepository, error) {
-	repo := u.Repositories[implementationName]()
-	return repo.(repository.UserRepository), nil
+func (u *UowImpl) GetUserRepository(ctx context.Context, tx *sql.Tx) repository.UserRepository {
+	return repository.NewUserRepositoryPostgres(tx)
 }
 
-func (u *UowImpl) Do(ctx context.Context, fn func(uow *UowImpl) error) error {
-	if u.Tx != nil {
-		return errors.New("transaction already started")
+func (u *UowImpl) Do(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	var err error
+	var tx *sql.Tx
+	var retries = 0
+	for retries < u.totalRetries {
+		tx, err = u.Db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+		if err != nil {
+			return err
+		}
+		err = fn(tx)
+		if err == nil {
+			break
+		}
+		if err != nil {
+			if errors.Unwrap(err) != nil {
+				if errors.Unwrap(err).Error() == isolationSerializableErr.Error() {
+					errRb := tx.Rollback()
+					if errRb != nil {
+						return fmt.Errorf("original error: %s, rollback error: %s", err.Error(), errRb.Error())
+					}
+					retries++
+					continue
+				}
+			}
+			break
+		}
 	}
-	tx, err := u.Db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
-		return err
-	}
-	u.Tx = tx
-	err = fn(u)
-	if err != nil {
-		errRb := u.Rollback()
+		errRb := tx.Rollback()
 		if errRb != nil {
-			return fmt.Errorf("orignal error: %s, rollback error: %s", err.Error(), errRb.Error())
+			return fmt.Errorf("original error: %s, rollback error: %s", err.Error(), errRb.Error())
 		}
 		return err
 	}
-	return u.CommitOrRollback()
-}
-
-func (u *UowImpl) CommitOrRollback() error {
-	defer func() {
-		u.Tx = nil
-	}()
-	err := u.Tx.Commit()
+	err = tx.Commit()
 	if err != nil {
-		errRb := u.Rollback()
+		errRb := tx.Rollback()
 		if errRb != nil {
-			return fmt.Errorf("orignal error: %s, rollback error: %s", err.Error(), errRb.Error())
+			return fmt.Errorf("commit error: %s, rollback error: %s", err.Error(), errRb.Error())
 		}
-		return err
 	}
-	u.Tx = nil
-	return nil
-}
-
-func (u *UowImpl) Rollback() error {
-	defer func() {
-		u.Tx = nil
-	}()
-	if u.Tx == nil {
-		return errors.New("no transaction to rollback")
-	}
-	err := u.Tx.Rollback()
-	if err != nil {
-		return err
-	}
-	u.Tx = nil
 	return nil
 }
