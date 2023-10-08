@@ -15,13 +15,11 @@ type UserRepository interface {
 }
 
 type UserRepositoryPostgres struct {
-	DB *sql.DB
 	Tx *sql.Tx
 }
 
-func NewUserRepositoryPostgres(DB *sql.DB, TX *sql.Tx) *UserRepositoryPostgres {
+func NewUserRepositoryPostgres(TX *sql.Tx) *UserRepositoryPostgres {
 	return &UserRepositoryPostgres{
-		DB: DB,
 		Tx: TX,
 	}
 }
