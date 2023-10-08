@@ -31,17 +31,26 @@ func (u *User) Transfer(input *TransferInput) (err error) {
 		if err != nil {
 			return err
 		}
-		err = repo.Withdraw(ctx, debtorUser)
-		if err != nil {
-			return err
-		}
 		beneficiaryUser, err := repo.FindUserTx(ctx, input.BeneficiaryID)
 		if err != nil {
 			return err
 		}
 		beneficiaryUser.Deposit(input.Amount)
-		err = repo.Deposit(ctx, beneficiaryUser)
-		return err
+		if beneficiaryUser.ID > debtorUser.ID {
+			err = repo.Update(ctx, debtorUser)
+			if err != nil {
+				return err
+			}
+			err = repo.Update(ctx, beneficiaryUser)
+			return err
+		} else {
+			err = repo.Update(ctx, beneficiaryUser)
+			if err != nil {
+				return err
+			}
+			err = repo.Update(ctx, debtorUser)
+			return err
+		}
 	})
 	return
 }
