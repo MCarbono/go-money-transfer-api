@@ -82,7 +82,7 @@ func TestUserService(t *testing.T) {
 		for i := 0; i < totalRequests; i++ {
 			go func() {
 				defer wg.Done()
-				user.Transfer(&service.TransferInput{
+				err = user.Transfer(&service.TransferInput{
 					Amount:        100,
 					DebtorID:      1,
 					BeneficiaryID: 2,
@@ -189,49 +189,6 @@ func TestUserService(t *testing.T) {
 		}
 	})
 
-	// t.Run("Should not be able to make a transfer because something went wrong while doing it and the balance of the debtor should be restored", func(t *testing.T) {
-	// 	DB.Exec("DELETE FROM users;")
-	// 	defer DB.Exec("DELETE FROM users;")
-	// 	_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (1, 'first_user', 500);")
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 		return
-	// 	}
-	// 	_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (2, 'second_user', 100);")
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 		return
-	// 	}
-	// 	uow.Register("UserRepository", func() interface{} {
-	// 		repo := repository.NewUserRepositoryFakeTest(uow.Db, uow.Tx)
-	// 		return repo
-	// 	})
-	// 	user := service.NewUser(DB, uow)
-	// 	err := user.Transfer(&service.TransferInput{
-	// 		Amount:        100,
-	// 		DebtorID:      1,
-	// 		BeneficiaryID: 2,
-	// 	})
-	// 	outputDebtor, err := user.GetBalance(1)
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 		return
-	// 	}
-	// 	outputBeneficiary, err := user.GetBalance(2)
-	// 	if err != nil {
-	// 		t.Error(err)
-	// 		return
-	// 	}
-	// 	outputDebtorWant := 500.0
-	// 	if outputDebtor.Balance != outputDebtorWant {
-	// 		t.Errorf("Transfer() failed. want: %v, got %v", outputDebtorWant, outputDebtor.Balance)
-	// 	}
-	// 	outputBeneficiaryWant := 100.0
-	// 	if outputBeneficiary.Balance != outputBeneficiaryWant {
-	// 		t.Errorf("Transfer() failed. want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
-	// 	}
-	// })
-
 	t.Run("Should not be able to make a transfer because debtor user does not have enough balance", func(t *testing.T) {
 		DB.Exec("DELETE FROM users;")
 		defer DB.Exec("DELETE FROM users;")
@@ -256,4 +213,113 @@ func TestUserService(t *testing.T) {
 			t.Errorf("Transfer() failed. want %v, got %v", want, got)
 		}
 	})
+
+	t.Run("Should be able make 5 transfers to user 1 to 2 and 5 transfers to user 2 to 1", func(t *testing.T) {
+		DB.Exec("DELETE FROM users;")
+		defer DB.Exec("DELETE FROM users;")
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (1, 'first_user', 500);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (2, 'second_user', 500);")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		user := service.NewUser(DB, uow)
+		var wg sync.WaitGroup
+		totalRequests := 10
+		wg.Add(totalRequests)
+		for i := 0; i < totalRequests; i++ {
+			if i%2 == 0 {
+				go func() {
+					defer wg.Done()
+					err = user.Transfer(&service.TransferInput{
+						Amount:        100,
+						DebtorID:      1,
+						BeneficiaryID: 2,
+					})
+					if err != nil {
+						t.Log(err)
+					}
+				}()
+			} else {
+				go func() {
+					defer wg.Done()
+					err = user.Transfer(&service.TransferInput{
+						Amount:        50,
+						DebtorID:      2,
+						BeneficiaryID: 1,
+					})
+					if err != nil {
+						t.Log(err)
+					}
+				}()
+			}
+
+		}
+		wg.Wait()
+		account1, err := user.GetBalance(1)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		account2, err := user.GetBalance(2)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		account1BalanceWant := 250.0
+		if account1.Balance != account1BalanceWant {
+			t.Errorf("Transfer() failed. Debtor balance want: %v, got %v", account1BalanceWant, account1.Balance)
+		}
+		account2BalanceWant := 750.0
+		if account2.Balance != account2BalanceWant {
+			t.Errorf("Transfer() failed. Beneciary balance want: %v, got %v", account2BalanceWant, account2.Balance)
+		}
+	})
 }
+
+// t.Run("Should not be able to make a transfer because something went wrong while doing it and the balance of the debtor should be restored", func(t *testing.T) {
+// 	DB.Exec("DELETE FROM users;")
+// 	defer DB.Exec("DELETE FROM users;")
+// 	_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (1, 'first_user', 500);")
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	_, err = DB.Exec("INSERT INTO users (id, username, balance) VALUES (2, 'second_user', 100);")
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	uow.Register("UserRepository", func() interface{} {
+// 		repo := repository.NewUserRepositoryFakeTest(uow.Db, uow.Tx)
+// 		return repo
+// 	})
+// 	user := service.NewUser(DB, uow)
+// 	err := user.Transfer(&service.TransferInput{
+// 		Amount:        100,
+// 		DebtorID:      1,
+// 		BeneficiaryID: 2,
+// 	})
+// 	outputDebtor, err := user.GetBalance(1)
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	outputBeneficiary, err := user.GetBalance(2)
+// 	if err != nil {
+// 		t.Error(err)
+// 		return
+// 	}
+// 	outputDebtorWant := 500.0
+// 	if outputDebtor.Balance != outputDebtorWant {
+// 		t.Errorf("Transfer() failed. want: %v, got %v", outputDebtorWant, outputDebtor.Balance)
+// 	}
+// 	outputBeneficiaryWant := 100.0
+// 	if outputBeneficiary.Balance != outputBeneficiaryWant {
+// 		t.Errorf("Transfer() failed. want: %v, got %v", outputBeneficiaryWant, outputBeneficiary.Balance)
+// 	}
+// })
