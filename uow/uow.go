@@ -16,19 +16,21 @@ type Uow interface {
 }
 
 type UowImpl struct {
-	Db           *sql.DB
-	totalRetries int
+	Db             *sql.DB
+	totalRetries   int
+	userRepository repository.UserRepository
 }
 
-func NewUowImpl(db *sql.DB) *UowImpl {
+func NewUowImpl(db *sql.DB, userRepository repository.UserRepository) *UowImpl {
 	return &UowImpl{
-		Db:           db,
-		totalRetries: 7,
+		Db:             db,
+		totalRetries:   7,
+		userRepository: userRepository,
 	}
 }
 
 func (u *UowImpl) GetUserRepository(ctx context.Context, tx *sql.Tx) repository.UserRepository {
-	return repository.NewUserRepositoryPostgres(tx)
+	return u.userRepository.Clone(tx)
 }
 
 func (u *UowImpl) Do(ctx context.Context, fn func(tx *sql.Tx) error) error {

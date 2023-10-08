@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"money-transfer-api/entity"
 )
@@ -10,15 +11,20 @@ import (
 type UserRepository interface {
 	FindUserTx(ctx context.Context, ID int) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
+	Clone(tx *sql.Tx) UserRepository
 }
 
 type UserRepositoryPostgres struct {
 	Tx *sql.Tx
 }
 
-func NewUserRepositoryPostgres(TX *sql.Tx) *UserRepositoryPostgres {
+func NewUserRepositoryPostgres() *UserRepositoryPostgres {
+	return &UserRepositoryPostgres{}
+}
+
+func (r *UserRepositoryPostgres) Clone(tx *sql.Tx) UserRepository {
 	return &UserRepositoryPostgres{
-		Tx: TX,
+		Tx: tx,
 	}
 }
 
@@ -40,14 +46,16 @@ func (r *UserRepositoryPostgres) Update(ctx context.Context, user *entity.User) 
 }
 
 type UserRepositoryFakeTest struct {
-	DB *sql.DB
 	Tx *sql.Tx
 }
 
-func NewUserRepositoryFakeTest(DB *sql.DB, TX *sql.Tx) *UserRepositoryFakeTest {
+func NewUserRepositoryFakeTest() *UserRepositoryFakeTest {
+	return &UserRepositoryFakeTest{}
+}
+
+func (r *UserRepositoryFakeTest) Clone(tx *sql.Tx) UserRepository {
 	return &UserRepositoryFakeTest{
-		DB: DB,
-		Tx: TX,
+		Tx: tx,
 	}
 }
 
@@ -61,6 +69,9 @@ func (r *UserRepositoryFakeTest) FindUserTx(ctx context.Context, ID int) (*entit
 }
 
 func (r *UserRepositoryFakeTest) Update(ctx context.Context, user *entity.User) error {
+	if user.ID == 2 {
+		return errors.New("test error")
+	}
 	_, err := r.Tx.Exec("UPDATE users SET balance = $2, username = $3 WHERE id = $1", user.ID, user.Balance, user.Username)
 	if err != nil {
 		return fmt.Errorf("error trying to update. %w", err)

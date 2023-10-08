@@ -7,6 +7,7 @@ import (
 	"money-transfer-api/infra/controller"
 	"money-transfer-api/infra/database"
 	"money-transfer-api/infra/router"
+	"money-transfer-api/repository"
 	"money-transfer-api/service"
 	"money-transfer-api/uow"
 	"net/http"
@@ -24,7 +25,7 @@ func main() {
 		panic(err)
 	}
 	defer DB.Close()
-	uow := uow.NewUowImpl(DB)
+	uow := uow.NewUowImpl(DB, repository.NewUserRepositoryPostgres())
 	userService := service.NewUser(DB, uow)
 	controller := controller.NewUserController(*userService)
 	router := router.NewRouter(*controller)
