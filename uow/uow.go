@@ -23,7 +23,7 @@ type UowImpl struct {
 func NewUowImpl(db *sql.DB) *UowImpl {
 	return &UowImpl{
 		Db:           db,
-		totalRetries: 4,
+		totalRetries: 7,
 	}
 }
 
