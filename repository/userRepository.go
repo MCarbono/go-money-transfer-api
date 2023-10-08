@@ -3,15 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"money-transfer-api/entity"
 )
 
 type UserRepository interface {
 	FindUserTx(ctx context.Context, ID int) (*entity.User, error)
-	Withdraw(ctx context.Context, user *entity.User) error
-	Deposit(ctx context.Context, user *entity.User) error
+	Update(ctx context.Context, user *entity.User) error
 }
 
 type UserRepositoryPostgres struct {
@@ -33,20 +31,12 @@ func (r *UserRepositoryPostgres) FindUserTx(ctx context.Context, ID int) (*entit
 	return &user, nil
 }
 
-func (r *UserRepositoryPostgres) Withdraw(ctx context.Context, user *entity.User) error {
-	_, err := r.Tx.Exec("UPDATE users SET balance = $2 WHERE id = $1", user.ID, user.Balance)
+func (r *UserRepositoryPostgres) Update(ctx context.Context, user *entity.User) error {
+	_, err := r.Tx.Exec("UPDATE users SET balance = $2, username = $3 WHERE id = $1", user.ID, user.Balance, user.Username)
 	if err != nil {
-		return fmt.Errorf("error trying to withdraw. %w", err)
+		return fmt.Errorf("error trying to update. %w", err)
 	}
 	return nil
-}
-
-func (r *UserRepositoryPostgres) Deposit(ctx context.Context, user *entity.User) error {
-	_, err := r.Tx.Exec("UPDATE users SET balance = $2 WHERE id = $1", user.ID, user.Balance)
-	if err != nil {
-		return fmt.Errorf("error trying to deposit balance. %w", err)
-	}
-	return err
 }
 
 type UserRepositoryFakeTest struct {
@@ -68,16 +58,4 @@ func (r *UserRepositoryFakeTest) FindUserTx(ctx context.Context, ID int) (*entit
 		return nil, fmt.Errorf("error trying to get user with ID %v. %w", ID, err)
 	}
 	return &user, nil
-}
-
-func (r *UserRepositoryFakeTest) Withdraw(ctx context.Context, user *entity.User) error {
-	_, err := r.Tx.Exec("UPDATE users SET balance = $2 WHERE id = $1", user.ID, user.Balance)
-	if err != nil {
-		return fmt.Errorf("error trying to withdraw. %w", err)
-	}
-	return nil
-}
-
-func (r *UserRepositoryFakeTest) Deposit(ctx context.Context, user *entity.User) error {
-	return errors.New("Test error")
 }
