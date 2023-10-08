@@ -7,7 +7,6 @@ import (
 	"money-transfer-api/infra/controller"
 	"money-transfer-api/infra/database"
 	"money-transfer-api/infra/router"
-	"money-transfer-api/repository"
 	"money-transfer-api/service"
 	"money-transfer-api/uow"
 	"net/http"
@@ -26,10 +25,6 @@ func main() {
 	}
 	defer DB.Close()
 	uow := uow.NewUowImpl(DB)
-	uow.Register("UserRepository", func() interface{} {
-		repo := repository.NewUserRepositoryPostgres(uow.Db, uow.Tx)
-		return repo
-	})
 	userService := service.NewUser(DB, uow)
 	controller := controller.NewUserController(*userService)
 	router := router.NewRouter(*controller)
